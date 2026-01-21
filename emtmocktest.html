@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EMT-1 模擬考 (25題版)</title>
+    <title>EMT-1 模擬考 (25題版 - 修正)</title>
     <style>
         :root {
             --primary: #2563eb;
@@ -154,11 +154,19 @@
             background-color: #eff6ff;
         }
 
+        /* 選中樣式 */
         .option-btn.selected {
             background-color: #dbeafe;
             border-color: var(--primary);
             color: var(--primary);
             font-weight: bold;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+        }
+
+        /* 鎖定樣式 (防止連點) */
+        .options-grid.locked {
+            pointer-events: none;
+            opacity: 0.8;
         }
 
         /* Result Screen */
@@ -374,8 +382,9 @@
 
     let currentQuestions = [];
     let currentIndex = 0;
-    let userAnswers = {}; // 紀錄使用者答案 { questionIndex: selectedOptionIndex }
+    let userAnswers = {}; // 紀錄使用者答案 { 0: originalIndex, 1: originalIndex... }
     let isOptionRandom = false;
+    let isTransitioning = false; // 防止連點標記
 
     const startScreen = document.getElementById('start-screen');
     const quizScreen = document.getElementById('quiz-screen');
@@ -393,15 +402,19 @@
         // 1. 讀取設定
         isOptionRandom = randomToggle.checked;
         
-        // 2. 隨機抽取 25 題
+        // 2. 清除所有問題的已處理選項 (確保重新洗牌)
+        fullQuizData.forEach(q => delete q.processedOptions);
+        
+        // 3. 隨機抽取 25 題
         let shuffled = [...fullQuizData].sort(() => 0.5 - Math.random());
         currentQuestions = shuffled.slice(0, 25);
         
-        // 3. 重置狀態
+        // 4. 重置狀態
         currentIndex = 0;
         userAnswers = {};
+        isTransitioning = false;
         
-        // 4. 切換畫面
+        // 5. 切換畫面
         startScreen.style.display = 'none';
         resultScreen.style.display = 'none';
         quizScreen.style.display = 'block';
@@ -410,6 +423,9 @@
     }
 
     function showQuestion() {
+        // 重置轉場鎖定
+        isTransitioning = false; 
+        
         const q = currentQuestions[currentIndex];
         
         // 更新進度 UI
@@ -418,17 +434,22 @@
         progressFill.style.width = `${progressPercent}%`;
         
         questionText.innerText = `[${q.id}] ${q.question}`;
+        
+        // *** 關鍵修正：強制清空並移除鎖定樣式 ***
         optionsContainer.innerHTML = '';
+        optionsContainer.classList.remove('locked');
 
         // 導航按鈕狀態
         prevBtn.style.display = currentIndex > 0 ? 'inline-block' : 'none';
-        submitBtn.style.display = 'none'; // 先隱藏交卷按鈕
+        
+        // 檢查是否最後一題且已作答
+        if (currentIndex === 24 && userAnswers[currentIndex]) {
+             submitBtn.style.display = 'inline-block';
+        } else {
+             submitBtn.style.display = 'none';
+        }
 
         // 準備選項 (處理隨機)
-        // 注意：為了讓使用者按上一頁時選項位置不變，
-        // 理想狀況應該是在 initQuiz 時就決定好每題的選項順序。
-        // 但為了簡化，這裡暫時每次渲染都隨機 (如果不希望變動，需存在 currentQuestions 裡)
-        // 修正：將隨機後的選項存回 currentQuestions 以保持一致性
         if (!q.processedOptions) {
             let opts = q.options.map((text, i) => ({ 
                 originalIndex: i + 1, 
@@ -437,7 +458,8 @@
             
             if (isOptionRandom) {
                 opts.sort(() => Math.random() - 0.5);
-                opts.forEach(o => o.text = o.text.replace(/^[\(（]?\d+[\)）\.]?/, '')); // 移除編號
+                // 移除編號 (1) (2) 等
+                opts.forEach(o => o.text = o.text.replace(/^[\(（]?\d+[\)）\.]?/, '')); 
             }
             q.processedOptions = opts;
         }
@@ -449,6 +471,7 @@
             btn.innerText = opt.text;
             
             // 檢查是否已選擇過 (回頭修改時顯示)
+            // *** 關鍵：確保 userAnswers 對應正確的 currentIndex ***
             if (userAnswers[currentIndex] === opt.originalIndex) {
                 btn.classList.add('selected');
             }
@@ -456,34 +479,35 @@
             btn.onclick = () => selectOption(opt.originalIndex);
             optionsContainer.appendChild(btn);
         });
-        
-        // 如果是最後一題，且已經作答過，顯示交卷按鈕
-        if (currentIndex === 24 && userAnswers[currentIndex]) {
-             submitBtn.style.display = 'inline-block';
-        }
     }
 
     function selectOption(originalIndex) {
+        // 防止連點
+        if (isTransitioning) return;
+        
         // 1. 記錄答案
         userAnswers[currentIndex] = originalIndex;
         
         // 2. 更新 UI 顯示 (Highlight)
         const buttons = optionsContainer.getElementsByClassName('option-btn');
         Array.from(buttons).forEach(btn => btn.classList.remove('selected'));
-        // 找出對應的按鈕加 highlight (這裡需要重新遍歷因為 DOM 順序可能因隨機而異)
-        // 簡單做法：重新 render 或直接操作 click 的 target (但這裡傳入 index)
-        // 為了效能，直接重新呼叫 showQuestion 更新狀態即可，但為了動畫順暢：
+        // 重新渲染以確保狀態正確 (雖然稍微耗能但最安全)
         showQuestion(); 
+        
+        // 3. 鎖定容器，防止在等待期間點擊其他選項
+        isTransitioning = true;
+        optionsContainer.classList.add('locked');
 
-        // 3. 自動跳下一題 (延遲 300ms 讓使用者看到選擇)
+        // 4. 自動跳下一題 (延遲 300ms)
         if (currentIndex < 24) {
             setTimeout(() => {
                 nextQuestion();
             }, 300);
         } else {
-            // 最後一題，顯示交卷按鈕
+            // 最後一題，解除鎖定並顯示交卷
+            isTransitioning = false;
+            optionsContainer.classList.remove('locked');
             submitBtn.style.display = 'inline-block';
-            // 自動滾動到底部以免按鈕被遮住
             window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
         }
     }
@@ -497,6 +521,8 @@
     }
 
     function prevQuestion() {
+        if (isTransitioning) return; // 轉場中不可返回
+        
         if (currentIndex > 0) {
             currentIndex--;
             showQuestion();
@@ -522,7 +548,6 @@
             if (isCorrect) score += 4;
             
             // 找出正確選項的文字
-            // 注意：q.processedOptions 是打亂後的，我們需要遍歷找到 originalIndex 符合的
             const correctOptText = q.processedOptions.find(o => o.originalIndex === correctAns).text;
             const userOptText = userAns ? q.processedOptions.find(o => o.originalIndex === userAns).text : "未作答";
 
