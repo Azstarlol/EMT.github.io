@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GCS 昏迷指數測驗 (EVM隨機)</title>
+    <title>GCS 昏迷指數測驗</title>
     <style>
         :root {
             --primary-color: #2c3e50;
@@ -14,7 +14,7 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: "Microsoft JhengHei", "Heiti TC", sans-serif; /* 優化中文顯示 */
             background-color: var(--bg-color);
             display: flex;
             justify-content: center;
@@ -30,7 +30,7 @@
             border-radius: 15px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.1);
             width: 90%;
-            max-width: 600px;
+            max-width: 650px; /* 稍微加寬以容納長文字 */
             text-align: center;
         }
 
@@ -50,24 +50,25 @@
         }
 
         .scenario-item {
-            margin: 10px 0;
-            font-size: 1.1rem;
+            margin: 12px 0;
+            font-size: 1.15rem;
             display: flex;
-            justify-content: space-between;
+            align-items: flex-start; /* 文字長時靠上對齊 */
             border-bottom: 1px dashed #ddd;
-            padding-bottom: 5px;
+            padding-bottom: 8px;
         }
 
         .scenario-label {
             font-weight: bold;
             color: var(--accent-color);
-            width: 40px;
+            min-width: 35px; /* 固定寬度 */
+            margin-right: 10px;
         }
 
         .scenario-desc {
             flex: 1;
-            text-align: right;
-            color: #555;
+            color: #444;
+            line-height: 1.4;
         }
 
         .options-grid {
@@ -81,12 +82,13 @@
             background-color: white;
             border: 2px solid var(--primary-color);
             color: var(--primary-color);
-            padding: 10px;
+            padding: 12px 5px;
             font-size: 1.2rem;
             font-weight: bold;
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.2s;
+            font-family: inherit;
         }
 
         .score-btn:hover {
@@ -114,22 +116,24 @@
         }
 
         #result-area {
-            min-height: 60px;
+            min-height: 80px; /* 增加高度給詳細解說 */
             margin-top: 1rem;
             font-size: 1.2rem;
             font-weight: bold;
+            white-space: pre-line; /* 支援換行 */
         }
 
         .next-btn {
             background-color: var(--accent-color);
             color: white;
             border: none;
-            padding: 10px 25px;
-            font-size: 1rem;
-            border-radius: 25px;
+            padding: 12px 30px;
+            font-size: 1.1rem;
+            border-radius: 30px;
             cursor: pointer;
-            display: none; /* Hidden by default */
+            display: none;
             margin: 10px auto;
+            font-family: inherit;
         }
 
         .next-btn:hover {
@@ -151,19 +155,19 @@
     <div class="scenario-box">
         <div class="scenario-item">
             <span class="scenario-label">E</span>
-            <span class="scenario-desc" id="desc-e">載入中...</span>
+            <span class="scenario-desc" id="desc-e">題目載入中...</span>
         </div>
         <div class="scenario-item">
             <span class="scenario-label">V</span>
-            <span class="scenario-desc" id="desc-v">載入中...</span>
+            <span class="scenario-desc" id="desc-v">題目載入中...</span>
         </div>
         <div class="scenario-item">
             <span class="scenario-label">M</span>
-            <span class="scenario-desc" id="desc-m">載入中...</span>
+            <span class="scenario-desc" id="desc-m">題目載入中...</span>
         </div>
     </div>
 
-    <p>請計算總分並選擇：</p>
+    <p>請計算 GCS 總分：</p>
     
     <div class="options-grid" id="buttons-container">
         </div>
@@ -177,36 +181,37 @@
 </div>
 
 <script>
-    // GCS Data Definition
+    // 根據使用者要求更新的題庫 (註：為了隨機出題計算分數，不包含 'C' 選項)
     const gcsData = {
         E: [
-            { score: 4, text: "自動睜眼 (Spontaneous)" },
-            { score: 3, text: "對聲音有反應 (To sound)" },
-            { score: 2, text: "對痛覺有反應 (To pressure)" },
-            { score: 1, text: "無反應 (None)" }
+            { score: 4, text: "主動地睜開眼睛" },
+            { score: 3, text: "聽到呼喚後會睜眼" },
+            { score: 2, text: "有刺激或痛楚會睜眼" },
+            { score: 1, text: "對於刺激無反應" }
         ],
         V: [
-            { score: 5, text: "定向感清楚 (Oriented)" },
-            { score: 4, text: "對答混淆 (Confused)" },
-            { score: 3, text: "用字不當 (Words)" },
-            { score: 2, text: "發聲無法理解 (Sounds)" },
-            { score: 1, text: "無反應 (None)" }
+            { score: 5, text: "說話有條理，會與人交談" },
+            { score: 4, text: "可應答，但說話無邏輯性" },
+            { score: 3, text: "可說出單字或胡言亂語" },
+            { score: 2, text: "可發出無法理解的聲音" },
+            { score: 1, text: "無任何反應" }
         ],
         M: [
-            { score: 6, text: "服從指令 (Obey commands)" },
-            { score: 5, text: "定位痛點 (Localizing)" },
-            { score: 4, text: "正常回縮/閃避 (Normal flexion)" },
-            { score: 3, text: "異常屈曲 (Abnormal flexion)" },
-            { score: 2, text: "異常伸展 (Extension)" },
-            { score: 1, text: "無反應 (None)" }
+            { score: 6, text: "可遵從指令做出動作" },
+            { score: 5, text: "對疼痛刺激有反應，可定出疼痛刺激部位，並除去痛刺激" },
+            { score: 4, text: "對疼痛刺激有反應，可定出疼痛刺激部位，但無法除去痛刺激" },
+            { score: 3, text: "對疼痛刺激有反應，肢體會彎曲，試圖迴避" },
+            { score: 2, text: "對疼痛刺激有反應，肢體會異常伸展或僵直之姿勢" },
+            { score: 1, text: "無任何肢體反應" }
         ]
     };
 
     let currentTotal = 0;
+    let currentDetails = { e: 0, v: 0, m: 0 }; // 儲存當前分數細節
     let isAnswered = false;
     let streak = 0;
 
-    // Initialize buttons 3-15
+    // 初始化 3-15 按鈕
     function initButtons() {
         const container = document.getElementById('buttons-container');
         container.innerHTML = '';
@@ -220,35 +225,36 @@
         }
     }
 
-    // Generate random question
+    // 產生隨機題目
     function generateQuestion() {
         isAnswered = false;
         document.getElementById('result-area').textContent = '';
         document.getElementById('result-area').style.color = 'inherit';
         document.getElementById('next-btn').style.display = 'none';
         
-        // Reset buttons style
+        // 重置按鈕樣式
         const buttons = document.querySelectorAll('.score-btn');
         buttons.forEach(btn => {
             btn.className = 'score-btn';
             btn.disabled = false;
         });
 
-        // Randomly pick E, V, M
+        // 隨機抽取 E, V, M
         const e = gcsData.E[Math.floor(Math.random() * gcsData.E.length)];
         const v = gcsData.V[Math.floor(Math.random() * gcsData.V.length)];
         const m = gcsData.M[Math.floor(Math.random() * gcsData.M.length)];
 
-        // Display text
-        document.getElementById('desc-e').textContent = `${e.text} (${e.score}分)`;
-        document.getElementById('desc-v').textContent = `${v.text} (${v.score}分)`;
-        document.getElementById('desc-m').textContent = `${m.text} (${m.score}分)`;
+        // 顯示文字 (不顯示分數)
+        document.getElementById('desc-e').textContent = e.text;
+        document.getElementById('desc-v').textContent = v.text;
+        document.getElementById('desc-m').textContent = m.text;
 
-        // Calculate answer
+        // 計算答案與保存細節
         currentTotal = e.score + v.score + m.score;
+        currentDetails = { e: e.score, v: v.score, m: m.score };
     }
 
-    // Check Answer Logic
+    // 檢查答案
     function checkAnswer(selectedScore, btnElement) {
         if (isAnswered) return;
         isAnswered = true;
@@ -256,17 +262,20 @@
         const resultArea = document.getElementById('result-area');
         const correctBtn = document.getElementById(`btn-${currentTotal}`);
 
+        // 組成詳細解說字串
+        const detailText = `\n(E:${currentDetails.e} + V:${currentDetails.v} + M:${currentDetails.m})`;
+
         if (selectedScore === currentTotal) {
-            // Correct
+            // 答對
             btnElement.classList.add('correct');
-            resultArea.textContent = '答對了！';
+            resultArea.textContent = '答對了！' + detailText;
             resultArea.style.color = 'var(--success-color)';
             streak++;
         } else {
-            // Wrong
+            // 答錯
             btnElement.classList.add('wrong');
-            correctBtn.classList.add('correct'); // Show correct answer
-            resultArea.textContent = `答錯了。正確答案是 ${currentTotal} 分。`;
+            correctBtn.classList.add('correct'); // 顯示正確答案
+            resultArea.textContent = `答錯了。正確答案是 ${currentTotal} 分。${detailText}`;
             resultArea.style.color = 'var(--error-color)';
             streak = 0;
         }
@@ -274,12 +283,12 @@
         document.getElementById('streak').textContent = streak;
         document.getElementById('next-btn').style.display = 'block';
 
-        // Disable all buttons
+        // 鎖定所有按鈕
         const buttons = document.querySelectorAll('.score-btn');
         buttons.forEach(btn => btn.disabled = true);
     }
 
-    // Start the app
+    // 啟動程式
     initButtons();
     generateQuestion();
 
