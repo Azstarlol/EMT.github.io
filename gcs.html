@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GCS 昏迷指數測驗 (EVM隨機)</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --success-color: #27ae60;
+            --error-color: #c0392b;
+            --bg-color: #ecf0f1;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            color: #333;
+        }
+
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+            font-size: 1.8rem;
+        }
+
+        .scenario-box {
+            background-color: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            text-align: left;
+        }
+
+        .scenario-item {
+            margin: 10px 0;
+            font-size: 1.1rem;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px dashed #ddd;
+            padding-bottom: 5px;
+        }
+
+        .scenario-label {
+            font-weight: bold;
+            color: var(--accent-color);
+            width: 40px;
+        }
+
+        .scenario-desc {
+            flex: 1;
+            text-align: right;
+            color: #555;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+            gap: 10px;
+            margin-bottom: 1.5rem;
+        }
+
+        .score-btn {
+            background-color: white;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 10px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .score-btn:hover {
+            background-color: var(--primary-color);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .score-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .score-btn.correct {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+            color: white;
+        }
+
+        .score-btn.wrong {
+            background-color: var(--error-color);
+            border-color: var(--error-color);
+            color: white;
+        }
+
+        #result-area {
+            min-height: 60px;
+            margin-top: 1rem;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .next-btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            font-size: 1rem;
+            border-radius: 25px;
+            cursor: pointer;
+            display: none; /* Hidden by default */
+            margin: 10px auto;
+        }
+
+        .next-btn:hover {
+            background-color: #2980b9;
+        }
+
+        .stats {
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: #7f8c8d;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>GCS 昏迷指數測驗</h1>
+    
+    <div class="scenario-box">
+        <div class="scenario-item">
+            <span class="scenario-label">E</span>
+            <span class="scenario-desc" id="desc-e">載入中...</span>
+        </div>
+        <div class="scenario-item">
+            <span class="scenario-label">V</span>
+            <span class="scenario-desc" id="desc-v">載入中...</span>
+        </div>
+        <div class="scenario-item">
+            <span class="scenario-label">M</span>
+            <span class="scenario-desc" id="desc-m">載入中...</span>
+        </div>
+    </div>
+
+    <p>請計算總分並選擇：</p>
+    
+    <div class="options-grid" id="buttons-container">
+        </div>
+
+    <div id="result-area"></div>
+    <button class="next-btn" id="next-btn" onclick="generateQuestion()">下一題</button>
+    
+    <div class="stats">
+        連續答對: <span id="streak">0</span> 題
+    </div>
+</div>
+
+<script>
+    // GCS Data Definition
+    const gcsData = {
+        E: [
+            { score: 4, text: "自動睜眼 (Spontaneous)" },
+            { score: 3, text: "對聲音有反應 (To sound)" },
+            { score: 2, text: "對痛覺有反應 (To pressure)" },
+            { score: 1, text: "無反應 (None)" }
+        ],
+        V: [
+            { score: 5, text: "定向感清楚 (Oriented)" },
+            { score: 4, text: "對答混淆 (Confused)" },
+            { score: 3, text: "用字不當 (Words)" },
+            { score: 2, text: "發聲無法理解 (Sounds)" },
+            { score: 1, text: "無反應 (None)" }
+        ],
+        M: [
+            { score: 6, text: "服從指令 (Obey commands)" },
+            { score: 5, text: "定位痛點 (Localizing)" },
+            { score: 4, text: "正常回縮/閃避 (Normal flexion)" },
+            { score: 3, text: "異常屈曲 (Abnormal flexion)" },
+            { score: 2, text: "異常伸展 (Extension)" },
+            { score: 1, text: "無反應 (None)" }
+        ]
+    };
+
+    let currentTotal = 0;
+    let isAnswered = false;
+    let streak = 0;
+
+    // Initialize buttons 3-15
+    function initButtons() {
+        const container = document.getElementById('buttons-container');
+        container.innerHTML = '';
+        for (let i = 3; i <= 15; i++) {
+            const btn = document.createElement('button');
+            btn.className = 'score-btn';
+            btn.textContent = i;
+            btn.onclick = () => checkAnswer(i, btn);
+            btn.id = `btn-${i}`;
+            container.appendChild(btn);
+        }
+    }
+
+    // Generate random question
+    function generateQuestion() {
+        isAnswered = false;
+        document.getElementById('result-area').textContent = '';
+        document.getElementById('result-area').style.color = 'inherit';
+        document.getElementById('next-btn').style.display = 'none';
+        
+        // Reset buttons style
+        const buttons = document.querySelectorAll('.score-btn');
+        buttons.forEach(btn => {
+            btn.className = 'score-btn';
+            btn.disabled = false;
+        });
+
+        // Randomly pick E, V, M
+        const e = gcsData.E[Math.floor(Math.random() * gcsData.E.length)];
+        const v = gcsData.V[Math.floor(Math.random() * gcsData.V.length)];
+        const m = gcsData.M[Math.floor(Math.random() * gcsData.M.length)];
+
+        // Display text
+        document.getElementById('desc-e').textContent = `${e.text} (${e.score}分)`;
+        document.getElementById('desc-v').textContent = `${v.text} (${v.score}分)`;
+        document.getElementById('desc-m').textContent = `${m.text} (${m.score}分)`;
+
+        // Calculate answer
+        currentTotal = e.score + v.score + m.score;
+    }
+
+    // Check Answer Logic
+    function checkAnswer(selectedScore, btnElement) {
+        if (isAnswered) return;
+        isAnswered = true;
+
+        const resultArea = document.getElementById('result-area');
+        const correctBtn = document.getElementById(`btn-${currentTotal}`);
+
+        if (selectedScore === currentTotal) {
+            // Correct
+            btnElement.classList.add('correct');
+            resultArea.textContent = '答對了！';
+            resultArea.style.color = 'var(--success-color)';
+            streak++;
+        } else {
+            // Wrong
+            btnElement.classList.add('wrong');
+            correctBtn.classList.add('correct'); // Show correct answer
+            resultArea.textContent = `答錯了。正確答案是 ${currentTotal} 分。`;
+            resultArea.style.color = 'var(--error-color)';
+            streak = 0;
+        }
+
+        document.getElementById('streak').textContent = streak;
+        document.getElementById('next-btn').style.display = 'block';
+
+        // Disable all buttons
+        const buttons = document.querySelectorAll('.score-btn');
+        buttons.forEach(btn => btn.disabled = true);
+    }
+
+    // Start the app
+    initButtons();
+    generateQuestion();
+
+</script>
+
+</body>
+</html>
