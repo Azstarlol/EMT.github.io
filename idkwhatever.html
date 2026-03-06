@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>實習幹部名冊 (96/97期) - 記憶測驗</title>
+    <style>
+        :root {
+            --primary: #1e3a8a; /* 深藍色，符合軍校/部隊沉穩風格 */
+            --secondary: #3b82f6;
+            --success: #16a34a;
+            --error: #dc2626;
+            --bg: #f1f5f9;
+            --card: #ffffff;
+            --text: #1e293b;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 650px;
+            background-color: var(--card);
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            font-size: 1.5rem;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 1rem;
+        }
+
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        .btn:hover { background-color: var(--secondary); transform: translateY(-1px); }
+        .btn-outline { background-color: transparent; border: 2px solid var(--primary); color: var(--primary); }
+        .btn-outline:hover { background-color: #eff6ff; color: var(--primary); }
+
+        .progress-bar { width: 100%; height: 8px; background-color: #e2e8f0; border-radius: 4px; margin-bottom: 1.5rem; overflow: hidden; }
+        .progress-fill { height: 100%; background-color: var(--secondary); width: 0%; transition: width 0.3s ease; }
+
+        .question-badge {
+            display: inline-block;
+            background-color: #dbeafe;
+            color: var(--primary);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .question-text {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+            color: #0f172a;
+        }
+
+        .options-grid { display: grid; gap: 0.75rem; }
+        
+        .option-btn {
+            background-color: white;
+            border: 2px solid #cbd5e1;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1.05rem;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+        }
+
+        .option-btn:hover { border-color: var(--secondary); background-color: #f8fafc; }
+        .option-btn.selected { background-color: #eff6ff; border-color: var(--secondary); color: var(--primary); font-weight: bold; }
+        .options-grid.locked { pointer-events: none; opacity: 0.8; }
+
+        #result-screen { display: none; text-align: center; }
+        .score-circle { width: 130px; height: 130px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .pass { background-color: var(--success); }
+        .fail { background-color: var(--error); }
+        .score-number { font-size: 3rem; font-weight: 700; line-height: 1; }
+        
+        .review-list { text-align: left; margin-top: 1.5rem; max-height: 450px; overflow-y: auto; padding-right: 10px; }
+        .review-item { background: #f8fafc; border: 1px solid #e2e8f0; padding: 1rem; margin-bottom: 1rem; border-radius: 0.5rem; }
+        .review-item.correct { border-left: 5px solid var(--success); }
+        .review-item.wrong { border-left: 5px solid var(--error); }
+        .ans-tag { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.85rem; margin-top: 5px; font-weight: bold;}
+        .ans-correct { background-color: #dcfce7; color: #166534; }
+        .ans-wrong { background-color: #fee2e2; color: #991b1b; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="start-screen">
+        <h1>🎖️ 實習幹部名冊 (96/97期) 測驗</h1>
+        <p style="color: #64748b; line-height: 1.6; text-align: left; background: #f8fafc; padding: 15px; border-radius: 8px;">
+            此測驗包含 25 題，題型包含：<br>
+            📌 <b>職務尋人：</b> 實習旅/營長是誰？<br>
+            📌 <b>姓名尋職：</b> 這個名字是擔任哪個級職？<br>
+            📌 <b>克漏字：</b> 實習【　】：李晉安<br>
+            測驗涵蓋實習旅部、學一營、學二營、學三營。<br>
+            <strong>及格標準：90 分</strong>
+        </p>
+        <button class="btn" onclick="initQuiz()">開始測驗</button>
+    </div>
+
+    <div id="quiz-screen" style="display:none;">
+        <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+        <div class="question-badge">第 <span id="current-num">1</span> 題 / 共 25 題</div>
+        
+        <div class="question-text" id="question-text">題目載入中...</div>
+        <div class="options-grid" id="options-container"></div>
+
+        <div style="display:flex; gap: 1rem; margin-top: 1.5rem;">
+            <button class="btn btn-outline" id="prev-btn" onclick="prevQuestion()" style="display:none;">上一題</button>
+            <button class="btn" id="submit-btn" onclick="submitQuiz()" style="display:none;">交卷送出</button>
+        </div>
+    </div>
+
+    <div id="result-screen">
+        <div id="score-circle-el" class="score-circle">
+            <span class="score-number" id="final-score">0</span>
+            <span id="pass-text" style="font-size: 1rem; opacity: 0.9; margin-top: 5px;"></span>
+        </div>
+        <h3 style="color: var(--primary); margin-bottom: 0;">📝 測驗檢討</h3>
+        <div id="review-container" class="review-list"></div>
+        <button class="btn" onclick="location.reload()" style="margin-top: 1.5rem;">重新測驗</button>
+    </div>
+</div>
+
+<script>
+    // 題庫設計：包含你要求的「職位找人」、「人找職位」、「克漏字(填職位/填名字)」
+    const fullQuizData = [
+        // Type 1: 職務找人
+        { q: "【職務尋人】實習旅部中，擔任「實習旅長」的是哪位同學？", opts: ["李晉安", "劉昱宏", "吳秉傑", "張家瑜"], ans: 0 },
+        { q: "【職務尋人】學一營中，擔任「實習營長」的是哪位同學？", opts: ["李晉安", "劉昱宏", "吳秉傑", "張家瑜"], ans: 1 },
+        { q: "【職務尋人】學二營中，擔任「實習營長」的是哪位同學？", opts: ["張家瑜", "吳秉傑", "劉昱宏", "姜斌"], ans: 1 },
+        { q: "【職務尋人】學三營中，擔任「實習營長」的是哪位同學？", opts: ["邱姵慈", "林旻欣", "張家瑜", "李興寶"], ans: 2 },
+        { q: "【職務尋人】實習旅部中，擔任「實習旅政戰主任」的是哪位同學？", opts: ["吳佳穎", "賀義翔", "徐鼎凱", "王晏以"], ans: 0 },
+        { q: "【職務尋人】學一營中，擔任「實習營輔導長」的是哪位同學？", opts: ["潘富友", "朱侯樂", "邱姵慈", "蔡政安"], ans: 0 },
+        
+        // Type 2: 名字找職務
+        { q: "【姓名尋職】名字「呂昱緯」(管科系) 是擔任哪個級職？", opts: ["實習旅長", "實習副旅長", "實習營長", "實習旅參謀主任"], ans: 1 },
+        { q: "【姓名尋職】名字「褚昱宗」(物理系) 是擔任哪個級職？", opts: ["學一營 實習營輔導長", "學一營 實習營參謀主任", "學一營 實習訓練官", "學二營 實習營參謀主任"], ans: 1 },
+        { q: "【姓名尋職】名字「姜斌」(應外系) 是擔任哪個級職？", opts: ["學二營 實習營長", "學二營 實習副營長", "學二營 實習營輔導長", "學二營 實習政戰官"], ans: 1 },
+        { q: "【姓名尋職】名字「李興寶」(土木系) 是擔任哪個級職？", opts: ["實習旅人事官", "實習旅訓練官", "實習旅後勤官", "學三營 實習後勤官"], ans: 2 },
+        { q: "【姓名尋職】名字「周仕傑」(電機系) 是擔任哪個級職？", opts: ["學三營 實習訓練官", "學三營 實習兵工官", "實習旅訓練官", "學一營 實習訓練官"], ans: 0 },
+        
+        // Type 3: 克漏字 (填職位)
+        { q: "【克漏字】實習旅部 實習【　　　】：賀義翔", opts: ["旅長", "副旅長", "旅政戰主任", "旅參謀主任"], ans: 3 },
+        { q: "【克漏字】學一營 實習【　　　】：王黌鈞", opts: ["營長", "副營長", "營輔導長", "營參謀主任"], ans: 1 },
+        { q: "【克漏字】實習旅部 實習【　　　】：李晉安", opts: ["旅長", "副旅長", "旅士官督導長", "旅作戰官"], ans: 0 },
+        { q: "【克漏字】學二營 實習【　　　】：朱侯樂", opts: ["營長", "副營長", "營輔導長", "營參謀主任"], ans: 2 },
+        { q: "【克漏字】學三營 實習【　　　】：陳俊良", opts: ["營輔導長", "營參謀主任", "人事官", "訓練官"], ans: 1 },
+        { q: "【克漏字】實習旅部 實習旅【　　　】：曾禹程", opts: ["作戰官", "後勤官", "人事官", "訓練官"], ans: 2 },
+
+        // Type 4: 克漏字 (填名字 - 士官督導長系列 97期)
+        { q: "【克漏字】(97期) 實習旅士官督導長：【　　　】", opts: ["陳宥均", "詹逸洲", "陳豪毅", "胡沁櫰"], ans: 0 },
+        { q: "【克漏字】(97期) 學一營 實習營士官督導長：【　　　】", opts: ["陳宥均", "詹逸洲", "陳豪毅", "胡沁櫰"], ans: 1 },
+        { q: "【克漏字】(97期) 學二營 實習營士官督導長：【　　　】", opts: ["陳宥均", "詹逸洲", "陳豪毅", "胡沁櫰"], ans: 2 },
+        { q: "【克漏字】(97期) 學三營 實習營士官督導長：【　　　】", opts: ["陳宥均", "詹逸洲", "陳豪毅", "胡沁櫰"], ans: 3 },
+
+        // 混合進階題
+        { q: "【職務尋人】實習旅部中，擔任「實習旅作戰官」的是哪位同學？", opts: ["劉曄", "陸試恩", "黃民宇", "葉修辰"], ans: 0 },
+        { q: "【克漏字】學三營 實習【　　　】：陳業翎", opts: ["政戰官", "後勤官", "人事官", "通訊官"], ans: 2 },
+        { q: "【姓名尋職】名字「徐鼎凱」(應外系) 是擔任哪個級職？", opts: ["學一營 實習政戰官", "學二營 實習政戰官", "學三營 實習政戰官", "實習旅政戰官"], ans: 1 },
+        { q: "【克漏字】實習旅部 實習旅【　　　】：廖奕誠", opts: ["通信官", "兵工官", "政戰官", "經補官"], ans: 3 }
+    ];
+
+    let currentQ = 0;
+    let userAnswers = new Array(fullQuizData.length).fill(null);
+    let isTransitioning = false;
+
+    // 將題目隨機打亂，確保每次測驗順序不同 (選項順序固定，避免錯亂)
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+
+    function initQuiz() {
+        shuffleArray(fullQuizData); // 每次進來都打亂 25 題的順序
+        document.getElementById('start-screen').style.display = 'none';
+        document.getElementById('quiz-screen').style.display = 'block';
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        isTransitioning = false;
+        const data = fullQuizData[currentQ];
+        
+        document.getElementById('current-num').innerText = currentQ + 1;
+        document.getElementById('progress').style.width = `${((currentQ) / fullQuizData.length) * 100}%`;
+        document.getElementById('question-text').innerText = data.q;
+        
+        const container = document.getElementById('options-container');
+        container.innerHTML = "";
+        container.classList.remove('locked');
+
+        data.opts.forEach((opt, index) => {
+            const btn = document.createElement('button');
+            btn.className = "option-btn" + (userAnswers[currentQ] === index ? " selected" : "");
+            btn.innerHTML = `<span style="font-weight:bold; margin-right:10px;">(${String.fromCharCode(65 + index)})</span> ${opt}`;
+            btn.onclick = () => selectOption(index);
+            container.appendChild(btn);
+        });
+
+        // 導航按鈕顯示邏輯
+        document.getElementById('prev-btn').style.display = currentQ > 0 ? 'block' : 'none';
+        document.getElementById('submit-btn').style.display = currentQ === fullQuizData.length - 1 ? 'block' : 'none';
+    }
+
+    function selectOption(index) {
+        if (isTransitioning) return;
+        userAnswers[currentQ] = index;
+        
+        // 視覺更新
+        const btns = document.querySelectorAll('.option-btn');
+        btns.forEach((b, i) => b.classList.toggle('selected', i === index));
+
+        isTransitioning = true;
+        document.getElementById('options-container').classList.add('locked');
+
+        // 自動跳下一題 (延遲 300ms)
+        setTimeout(() => {
+            if (currentQ < fullQuizData.length - 1) {
+                currentQ++;
+                loadQuestion();
+            } else {
+                isTransitioning = false;
+                document.getElementById('options-container').classList.remove('locked');
+            }
+        }, 300);
+    }
+
+    function prevQuestion() {
+        if (currentQ > 0 && !isTransitioning) {
+            currentQ--;
+            loadQuestion();
+        }
+    }
+
+    function submitQuiz() {
+        if (!confirm("確定要交卷嗎？")) return;
+        
+        document.getElementById('quiz-screen').style.display = "none";
+        document.getElementById('result-screen').style.display = "block";
+        
+        let correctCount = 0;
+        let reviewHtml = "";
+
+        fullQuizData.forEach((data, i) => {
+            const uAns = userAnswers[i];
+            const isCorrect = (uAns === data.ans);
+            if (isCorrect) correctCount++;
+
+            const uAnsText = uAns !== null ? data.opts[uAns] : "未作答";
+            const cAnsText = data.opts[data.ans];
+
+            reviewHtml += `
+                <div class="review-item ${isCorrect ? 'correct' : 'wrong'}">
+                    <div style="font-weight: 600; margin-bottom: 8px;">Q${i+1}: ${data.q}</div>
+                    <div>
+                        <span class="ans-tag ${isCorrect ? 'ans-correct' : 'ans-wrong'}">
+                            您的作答: ${uAnsText}
+                        </span>
+                        ${!isCorrect ? `<span class="ans-tag ans-correct" style="margin-left:8px;">正確答案: ${cAnsText}</span>` : ''}
+                    </div>
+                </div>
+            `;
+        });
+
+        // 計算分數 (一題 4 分)
+        const score = correctCount * 4;
+        document.getElementById('final-score').innerText = score;
+        
+        const circleEl = document.getElementById('score-circle-el');
+        const passText = document.getElementById('pass-text');
+        
+        if (score >= 90) {
+            circleEl.className = "score-circle pass";
+            passText.innerText = "及格！表現優異！";
+        } else {
+            circleEl.className = "score-circle fail";
+            passText.innerText = "不及格，請再熟記！";
+        }
+
+        document.getElementById('review-container').innerHTML = reviewHtml;
+    }
+</script>
+
+</body>
+</html>
