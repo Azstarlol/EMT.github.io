@@ -108,36 +108,7 @@
             opacity: 0.8;
         }
 
-        #result-area {
-            min-height: 40px;
-            margin-top: 1rem;
-            font-size: 1.3rem;
-            font-weight: bold;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-
-        #result-text {
-            white-space: pre-line; /* 確保換行符號會生效 */
-            margin-top: 10px;
-        }
-
-        #error-image {
-            max-width: 200px; /* 限制迷因圖最大寬度 */
-            max-height: 200px; /* 限制迷因圖最大高度 */
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-            display: none; /* 預設隱藏 */
-            animation: popIn 0.3s ease-out; /* 加入一點彈出動畫讓嘲諷感更重 */
-        }
-
-        @keyframes popIn {
-            0% { transform: scale(0.8); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-
+        /* 下一題按鈕樣式 */
         .next-btn {
             background-color: var(--accent-color);
             color: white;
@@ -148,13 +119,44 @@
             border-radius: 30px;
             cursor: pointer;
             display: none;
-            margin: 15px auto 0;
+            margin: 10px auto 15px; /* 調整按鈕上下間距 */
             font-family: inherit;
             box-shadow: 0 4px 15px rgba(230, 126, 34, 0.3);
         }
 
         .next-btn:hover {
             background-color: #d35400;
+        }
+
+        /* 結果顯示區塊 (移到按鈕下方) */
+        #result-area {
+            min-height: 40px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #result-text {
+            white-space: pre-line;
+            margin-bottom: 15px; /* 與圖片之間的間距 */
+        }
+
+        #error-image {
+            max-width: 200px; 
+            max-height: 200px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            display: none; 
+            animation: popIn 0.3s ease-out;
+            margin: 0 auto;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
         }
 
         .stats {
@@ -170,9 +172,8 @@
         /* 蜥蜴圖片專用樣式 */
         .lizard-img {
             position: fixed;
-            width: 150px;
             pointer-events: none;
-            z-index: 1;
+            z-index: 1; /* 置於底部，被 container 蓋住的就當作躲起來 */
             transition: top 0.6s ease, left 0.6s ease, opacity 0.3s ease;
         }
 
@@ -198,12 +199,12 @@
     <div class="options-grid" id="options-container">
         </div>
 
-    <div id="result-area">
-        <img id="error-image" src="" alt="嘲諷圖片">
-        <div id="result-text"></div>
-    </div>
-    
     <button class="next-btn" id="next-btn" onclick="generateQuestion()">下一題</button>
+    
+    <div id="result-area">
+        <div id="result-text"></div>
+        <img id="error-image" src="" alt="嘲諷圖片">
+    </div>
     
     <div class="stats">
         連續答對: <span id="streak" style="font-weight: bold; color: var(--primary-color);">0</span> 題
@@ -271,7 +272,7 @@
     let isAnswered = false;
     let streak = 0;
 
-    // 放置蜥蜴圖片的邏輯
+    // 放置蜥蜴圖片的邏輯 (增加手機版支援)
     function placeLizards() {
         const container = document.getElementById('main-container');
         const rect = container.getBoundingClientRect();
@@ -281,40 +282,64 @@
         const lizard1 = document.getElementById('lizard1');
         const lizard2 = document.getElementById('lizard2');
         
-        const imgWidth = 150;
-        const imgHeight = 150; 
-        
         lizard1.style.display = 'block';
         lizard2.style.display = 'block';
 
-        let maxLeftX = rect.left - imgWidth;
-        if (maxLeftX < 0) {
-            maxLeftX = 0;
-            lizard1.style.opacity = '0.2';
-        } else {
+        if (vw <= 600) {
+            // 【手機版邏輯】寬度不夠，改放在畫面最上方與最下方
+            const imgSize = 70; // 手機版將蜥蜴縮小
+            lizard1.style.width = `${imgSize}px`;
+            lizard2.style.width = `${imgSize}px`;
             lizard1.style.opacity = '1';
-        }
-        let randomLeftX = Math.random() * maxLeftX;
-        let randomY1 = Math.random() * (vh - imgHeight);
-
-        lizard1.style.left = `${randomLeftX}px`;
-        lizard1.style.top = `${randomY1}px`;
-
-        let minRightX = rect.right;
-        let maxRightSpace = vw - minRightX - imgWidth;
-        let randomRightX;
-        
-        if (maxRightSpace < 0) {
-            randomRightX = vw - imgWidth;
-            lizard2.style.opacity = '0.2';
-        } else {
-            randomRightX = minRightX + Math.random() * maxRightSpace;
             lizard2.style.opacity = '1';
-        }
-        let randomY2 = Math.random() * (vh - imgHeight);
 
-        lizard2.style.left = `${randomRightX}px`;
-        lizard2.style.top = `${randomY2}px`;
+            // 蜥蜴 1 放上方區域
+            let topSpace = rect.top;
+            let randomTopY = Math.random() * Math.max(0, topSpace - imgSize);
+            lizard1.style.left = `${Math.random() * (vw - imgSize)}px`;
+            lizard1.style.top = `${randomTopY}px`;
+
+            // 蜥蜴 2 放下方區域
+            let bottomSpace = vh - rect.bottom;
+            let randomBottomY = rect.bottom + Math.random() * Math.max(0, bottomSpace - imgSize);
+            lizard2.style.left = `${Math.random() * (vw - imgSize)}px`;
+            lizard2.style.top = `${Math.min(vh - imgSize, randomBottomY)}px`;
+
+        } else {
+            // 【電腦版邏輯】放左右兩側
+            const imgSize = 150;
+            lizard1.style.width = `${imgSize}px`;
+            lizard2.style.width = `${imgSize}px`;
+
+            let maxLeftX = rect.left - imgSize;
+            if (maxLeftX < 0) {
+                maxLeftX = 0;
+                lizard1.style.opacity = '0.2';
+            } else {
+                lizard1.style.opacity = '1';
+            }
+            let randomLeftX = Math.random() * maxLeftX;
+            let randomY1 = Math.random() * (vh - imgSize);
+
+            lizard1.style.left = `${randomLeftX}px`;
+            lizard1.style.top = `${randomY1}px`;
+
+            let minRightX = rect.right;
+            let maxRightSpace = vw - minRightX - imgSize;
+            let randomRightX;
+            
+            if (maxRightSpace < 0) {
+                randomRightX = vw - imgSize;
+                lizard2.style.opacity = '0.2';
+            } else {
+                randomRightX = minRightX + Math.random() * maxRightSpace;
+                lizard2.style.opacity = '1';
+            }
+            let randomY2 = Math.random() * (vh - imgSize);
+
+            lizard2.style.left = `${randomRightX}px`;
+            lizard2.style.top = `${randomY2}px`;
+        }
     }
 
     window.addEventListener('resize', placeLizards);
@@ -339,7 +364,7 @@
     function generateQuestion() {
         isAnswered = false;
         
-        // 隱藏錯誤圖片、清空文字
+        // 隱藏錯誤圖片、清空文字、隱藏下一題按鈕
         document.getElementById('result-text').textContent = '';
         document.getElementById('error-image').style.display = 'none';
         document.getElementById('next-btn').style.display = 'none';
@@ -373,6 +398,7 @@
         shuffleArray(options);
         renderOptions(options);
         
+        // 給一點延遲確保 DOM 渲染完畢後再計算位置
         setTimeout(placeLizards, 50);
     }
 
@@ -405,7 +431,7 @@
             btnElement.classList.add('correct');
             resultText.textContent = '✅ 答對了！';
             resultText.style.color = 'var(--success-color)';
-            errorImage.style.display = 'none'; // 隱藏迷因圖
+            errorImage.style.display = 'none'; 
             streak++;
         } else {
             // 答錯了
@@ -419,7 +445,7 @@
             errorImage.src = `${randomImgNum}.jpg`;
             errorImage.style.display = 'block';
             
-            // 標示出正確答案讓使用者知道
+            // 標示出正確答案
             allButtons.forEach(btn => {
                 if (btn.dataset.value === currentAnswer) {
                     btn.classList.add('correct');
@@ -428,9 +454,12 @@
         }
 
         document.getElementById('streak').textContent = streak;
-        document.getElementById('next-btn').style.display = 'block';
+        document.getElementById('next-btn').style.display = 'block'; // 顯示在結果上方的下一題按鈕
 
         allButtons.forEach(btn => btn.disabled = true);
+        
+        // 答題後高度會改變，重新計算一次蜥蜴位置確保不跑版
+        setTimeout(placeLizards, 50);
     }
 
     // 啟動第一題
