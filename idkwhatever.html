@@ -22,6 +22,7 @@
             min-height: 100vh;
             margin: 0;
             color: #333;
+            overflow-x: hidden; /* 防止圖片超出邊界產生橫向捲軸 */
         }
 
         .container {
@@ -32,6 +33,8 @@
             width: 90%;
             max-width: 600px;
             text-align: center;
+            position: relative; /* 確保在圖片上層 */
+            z-index: 10; 
         }
 
         h1 {
@@ -110,6 +113,29 @@
             margin-top: 1rem;
             font-size: 1.3rem;
             font-weight: bold;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #result-text {
+            white-space: pre-line; /* 確保換行符號會生效 */
+            margin-top: 10px;
+        }
+
+        #error-image {
+            max-width: 200px; /* 限制迷因圖最大寬度 */
+            max-height: 200px; /* 限制迷因圖最大高度 */
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            display: none; /* 預設隱藏 */
+            animation: popIn 0.3s ease-out; /* 加入一點彈出動畫讓嘲諷感更重 */
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
         }
 
         .next-btn {
@@ -141,16 +167,28 @@
             border-radius: 20px;
         }
 
+        /* 蜥蜴圖片專用樣式 */
+        .lizard-img {
+            position: fixed;
+            width: 150px;
+            pointer-events: none;
+            z-index: 1;
+            transition: top 0.6s ease, left 0.6s ease, opacity 0.3s ease;
+        }
+
         @media (max-width: 480px) {
             .options-grid {
-                grid-template-columns: 1fr; /* 手機版改為單行排列 */
+                grid-template-columns: 1fr;
             }
         }
     </style>
 </head>
 <body>
 
-<div class="container">
+<img id="lizard1" src="lizard1.jpg" class="lizard-img" alt="Lizard 1" style="display: none;">
+<img id="lizard2" src="lizard2.jpg" class="lizard-img" alt="Lizard 2" style="display: none;">
+
+<div class="container" id="main-container">
     <h1>幹部級職與姓名測驗</h1>
     
     <div class="question-box" id="question-text">
@@ -160,7 +198,11 @@
     <div class="options-grid" id="options-container">
         </div>
 
-    <div id="result-area"></div>
+    <div id="result-area">
+        <img id="error-image" src="" alt="嘲諷圖片">
+        <div id="result-text"></div>
+    </div>
+    
     <button class="next-btn" id="next-btn" onclick="generateQuestion()">下一題</button>
     
     <div class="stats">
@@ -222,13 +264,60 @@
         { unit: "學三營", role: "實習營士官督導長", name: "胡沁櫰" }
     ];
 
-    // 取得所有不重複的名字和級職 (用於產生干擾選項)
     const allNames = [...new Set(rosterData.map(item => item.name))];
     const allRoles = [...new Set(rosterData.map(item => item.role))];
 
     let currentAnswer = "";
     let isAnswered = false;
     let streak = 0;
+
+    // 放置蜥蜴圖片的邏輯
+    function placeLizards() {
+        const container = document.getElementById('main-container');
+        const rect = container.getBoundingClientRect();
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        
+        const lizard1 = document.getElementById('lizard1');
+        const lizard2 = document.getElementById('lizard2');
+        
+        const imgWidth = 150;
+        const imgHeight = 150; 
+        
+        lizard1.style.display = 'block';
+        lizard2.style.display = 'block';
+
+        let maxLeftX = rect.left - imgWidth;
+        if (maxLeftX < 0) {
+            maxLeftX = 0;
+            lizard1.style.opacity = '0.2';
+        } else {
+            lizard1.style.opacity = '1';
+        }
+        let randomLeftX = Math.random() * maxLeftX;
+        let randomY1 = Math.random() * (vh - imgHeight);
+
+        lizard1.style.left = `${randomLeftX}px`;
+        lizard1.style.top = `${randomY1}px`;
+
+        let minRightX = rect.right;
+        let maxRightSpace = vw - minRightX - imgWidth;
+        let randomRightX;
+        
+        if (maxRightSpace < 0) {
+            randomRightX = vw - imgWidth;
+            lizard2.style.opacity = '0.2';
+        } else {
+            randomRightX = minRightX + Math.random() * maxRightSpace;
+            lizard2.style.opacity = '1';
+        }
+        let randomY2 = Math.random() * (vh - imgHeight);
+
+        lizard2.style.left = `${randomRightX}px`;
+        lizard2.style.top = `${randomY2}px`;
+    }
+
+    window.addEventListener('resize', placeLizards);
 
     // 洗牌函數
     function shuffleArray(array) {
@@ -239,7 +328,7 @@
         return array;
     }
 
-    // 取得干擾選項 (錯的答案)
+    // 取得干擾選項
     function getDistractors(correct, sourceArray, count) {
         let filtered = sourceArray.filter(item => item !== correct);
         shuffleArray(filtered);
@@ -249,35 +338,31 @@
     // 產生題目
     function generateQuestion() {
         isAnswered = false;
-        document.getElementById('result-area').textContent = '';
+        
+        // 隱藏錯誤圖片、清空文字
+        document.getElementById('result-text').textContent = '';
+        document.getElementById('error-image').style.display = 'none';
         document.getElementById('next-btn').style.display = 'none';
         
-        // 隨機抽取一個目標對象
         const target = rosterData[Math.floor(Math.random() * rosterData.length)];
-        
-        // 隨機決定題型 (0~3)
         const questionType = Math.floor(Math.random() * 4);
         
         let questionText = "";
         let options = [];
 
         if (questionType === 0) {
-            // 題型 1: 問名字
             questionText = `【${target.unit}】\n${target.role} 是誰？`;
             currentAnswer = target.name;
             options = [currentAnswer, ...getDistractors(currentAnswer, allNames, 3)];
         } else if (questionType === 1) {
-            // 題型 2: 問級職
             questionText = `【${target.unit}】\n${target.name} 的級職是？`;
             currentAnswer = target.role;
             options = [currentAnswer, ...getDistractors(currentAnswer, allRoles, 3)];
         } else if (questionType === 2) {
-            // 題型 3: 克漏字 - 填名字
             questionText = `【${target.unit}】 克漏字：\n${target.role}：「____」`;
             currentAnswer = target.name;
             options = [currentAnswer, ...getDistractors(currentAnswer, allNames, 3)];
         } else {
-            // 題型 4: 克漏字 - 填級職
             questionText = `【${target.unit}】 克漏字：\n「____」：${target.name}`;
             currentAnswer = target.role;
             options = [currentAnswer, ...getDistractors(currentAnswer, allRoles, 3)];
@@ -285,21 +370,22 @@
 
         document.getElementById('question-text').textContent = questionText;
 
-        // 打亂 4 個選項並渲染
         shuffleArray(options);
         renderOptions(options);
+        
+        setTimeout(placeLizards, 50);
     }
 
     // 渲染選項按鈕
     function renderOptions(options) {
         const container = document.getElementById('options-container');
-        container.innerHTML = ''; // 清空舊選項
+        container.innerHTML = ''; 
 
         options.forEach(opt => {
             const btn = document.createElement('button');
             btn.className = 'option-btn';
             btn.textContent = opt;
-            btn.dataset.value = opt; // 儲存真實值
+            btn.dataset.value = opt; 
             btn.onclick = () => checkAnswer(opt, btn);
             container.appendChild(btn);
         });
@@ -310,23 +396,30 @@
         if (isAnswered) return;
         isAnswered = true;
 
-        const resultArea = document.getElementById('result-area');
+        const resultText = document.getElementById('result-text');
+        const errorImage = document.getElementById('error-image');
         const allButtons = document.querySelectorAll('.option-btn');
 
         if (selectedOption === currentAnswer) {
-            // 答對
+            // 答對了
             btnElement.classList.add('correct');
-            resultArea.textContent = '✅ 答對了！';
-            resultArea.style.color = 'var(--success-color)';
+            resultText.textContent = '✅ 答對了！';
+            resultText.style.color = 'var(--success-color)';
+            errorImage.style.display = 'none'; // 隱藏迷因圖
             streak++;
         } else {
-            // 答錯
+            // 答錯了
             btnElement.classList.add('wrong');
-            resultArea.textContent = `❌ 答錯了。正確答案是：${currentAnswer}`;
-            resultArea.style.color = 'var(--error-color)';
+            resultText.textContent = `❌ 答錯了！去回報！😡\n正確答案是：${currentAnswer}`;
+            resultText.style.color = 'var(--error-color)';
             streak = 0;
             
-            // 找出並標示正確答案
+            // 隨機選取 1 到 6 的數字顯示迷因圖
+            const randomImgNum = Math.floor(Math.random() * 6) + 1;
+            errorImage.src = `${randomImgNum}.jpg`;
+            errorImage.style.display = 'block';
+            
+            // 標示出正確答案讓使用者知道
             allButtons.forEach(btn => {
                 if (btn.dataset.value === currentAnswer) {
                     btn.classList.add('correct');
@@ -337,7 +430,6 @@
         document.getElementById('streak').textContent = streak;
         document.getElementById('next-btn').style.display = 'block';
 
-        // 鎖定所有按鈕
         allButtons.forEach(btn => btn.disabled = true);
     }
 
